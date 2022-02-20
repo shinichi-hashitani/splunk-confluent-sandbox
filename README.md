@@ -1,6 +1,7 @@
-#  Splunkで収集されるネットワーク機器 (Cisco ASA) のログデータをConfluentで加工する実験環境 (Sandbox)
+#  Splunkにフィードされるネットワーク機器 (Cisco ASA) のログデータをConfluentで加工する実験環境 (Sandbox)
 
 ## Overview
+![Overview](./assets/images/overview.png "Overview")
 ネットワーク機器のログをSplunkのUniversal Forwarderを利用してConfluentに転送し、ストリーム処理後にSplunkのHECに転送するサンドボックス環境。オリジナルはJohnny MirzaのSplunk Demoであり利用しているほぼ全てのリソースは彼の準備したもの。 (https://github.com/JohnnyMirza/confluent_splunk_demo) 本リポジトリはその内容を絞り、日本語化したもの。
 
 ### 備考
@@ -16,7 +17,12 @@
 ```bash
 git clone https://github.com/shinichi-hashitani/splunk-confluent-sandbox.git
 cd splunk-confluent-sandbox
+# 起動
 docker-compose up -d
+# 停止/破棄
+docker-compose down
+# 停止後、ドライブを全て初期化
+docker volume prune
 ```
 
 ### AWS EC2の事前準備
@@ -43,3 +49,57 @@ docker-compose up -d
     sudo curl -L https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
     sudo chmod 755 /usr/local/bin/docker-compose
     ```
+
+## リポジトリ構成構成
+![Repo Structure](./assets/images/repo-structure.png "Repo Structure")
+- connect_scripts  
+Connect Cluster起動時の実行スクリプト。具体的にはConnector (Splunk Connector, etc.) の取得とConnectorの登録。
+- ksql-scripts  
+ksqlDB Server用ではなく別途立ち上げるksqlDB Client用のスクリプト。 ksqlDB Serverのプロパティ (KSQL_QUERIES_FILE)にこのパスを指定するとksqlDBをHeadlessモードで起動する事も可能。
+- splunk  
+Splunkのプロパティファイル
+- splunk-eventgen/eventgen.conf  
+使用するサンプルデータの定義。現在はcisco:asaを指定。
+- splunk-eventgen/samples  
+サンプルデータ。加工することによりデータのカスタマイズが可能。
+- splunk-uf1  
+Universal Forwarderのin/out定義設定。
+
+## 作業手順
+![Operation](./assets/images/operation.png "Operation")
+### 1. Creating a Stream
+Splunk UFから渡ってきたログはsplunk-s2s-eventsというEventに送られている。このTopicをストリーム化。
+```sql
+CREATE STREAM SPLUNK (
+`event` VARCHAR,
+`time` BIGINT,
+`host` VARCHAR,
+`source` VARCHAR,
+`sourcetype` VARCHAR,
+`index` VARCHAR
+) WITH (
+KAFKA_TOPIC='splunk-s2s-events', VALUE_FORMAT='JSON');
+```
+### 2. StreamからCISCO ASAのログのみ抽出
+Streamからcisco:asaのみ指定して抽出
+```sql
+CREATE STREAM CISCO_ASA as SELECT
+`event`,
+`source`,
+`sourcetype`,
+`index`  FROM SPLUNK
+where `sourcetype` = 'cisco:asa'
+EMIT CHANGES;
+```
+### 3. Streamから特定
+Streamから特定イベントのみ抽出し、同時にTopicを生成。CISCO_ASAからクエリ抽出も可能だがAND条件のサンプルとしてSPLUNKから抽出。
+```sql
+CREATE STREAM CISCO_ASA_FILTERED WITH (KAFKA_TOPIC='CISCO_ASA_FILTERED', PARTITIONS=1, REPLICAS=1) AS SELECT
+SPLUNK.`event` `event`,
+SPLUNK.`source` `source`,
+SPLUNK.`sourcetype` `sourcetype`,
+SPLUNK.`index` `index`
+FROM SPLUNK SPLUNK
+WHERE ((SPLUNK.`sourcetype` = 'cisco:asa') AND (NOT (SPLUNK.`event` LIKE '%ASA-4-106023%')))
+EMIT CHANGES;
+```

@@ -89,7 +89,7 @@ services:
       CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
       CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
     volumes:
-      - ./connect_scripts/:/tmp/scripts/
+      - ./connect-scripts/:/tmp/scripts/
     command:
       - /tmp/scripts/startKafkaConnectComponents.sh
 
@@ -128,7 +128,6 @@ services:
       - "8088:8088"
     volumes:
       - ./ksql-extension:/etc/ksql-extension/
-      - ./mmdb:/opt/mmdb/
     environment:
       KSQL_CONFIG_DIR: "/etc/ksql"
       KSQL_KSQL_EXTENSION_DIR: "/etc/ksql-extension"
@@ -156,7 +155,7 @@ services:
     entrypoint: /bin/sh
     tty: true
     volumes:
-      - ./ksqldb_scripts:/ksqldb_scripts
+      - ./ksqldb-scripts:/ksqldb-scripts
 
   rest-proxy:
     image: confluentinc/cp-kafka-rest:latest
