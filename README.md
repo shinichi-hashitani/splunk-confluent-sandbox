@@ -66,10 +66,7 @@ Splunkのプロパティファイル
 Universal Forwarderのin/out定義設定。
 
 ## 環境アクセス
-
-```
-管理コンソール (Control Center及びSpluk) にアクセスするには、それぞれ外部から対象ポート (9021及び8000) へのアクセスを許容する必要があります。
-```
+** 管理コンソール (Control Center及びSpluk) にアクセスするには、それぞれ外部から対象ポート (9021及び8000) へのアクセスを許容する必要があります。
 
 Confluent Control Center
 ```bash
