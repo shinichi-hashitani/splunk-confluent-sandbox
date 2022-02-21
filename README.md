@@ -65,6 +65,24 @@ Splunkのプロパティファイル
 - splunk-uf1  
 Universal Forwarderのin/out定義設定。
 
+## 環境アクセス
+
+```
+管理コンソール (Control Center及びSpluk) にアクセスするには、それぞれ外部から対象ポート (9021及び8000) へのアクセスを許容する必要があります。
+```
+
+Confluent Control Center
+```bash
+http://<Server FQDN>:9021 
+```
+
+Splunk
+```bash
+http://<Server FQDN>/en-GB/app/search/search
+user: admin
+password: Password1
+```
+
 ## 作業手順
 ![Operation](./assets/images/operation.png "Operation")
 ### 1. Creating a Stream
@@ -91,7 +109,7 @@ CREATE STREAM CISCO_ASA as SELECT
 where `sourcetype` = 'cisco:asa'
 EMIT CHANGES;
 ```
-### 3. Streamから特定
+### 3. Streamから特定イベントのみ抽出
 Streamから特定イベントのみ抽出し、同時にTopicを生成。CISCO_ASAからクエリ抽出も可能だがAND条件のサンプルとしてSPLUNKから抽出。
 ```sql
 CREATE STREAM CISCO_ASA_FILTERED WITH (KAFKA_TOPIC='CISCO_ASA_FILTERED', PARTITIONS=1, REPLICAS=1) AS SELECT
@@ -99,7 +117,19 @@ SPLUNK.`event` `event`,
 SPLUNK.`source` `source`,
 SPLUNK.`sourcetype` `sourcetype`,
 SPLUNK.`index` `index`
-FROM SPLUNK SPLUNK
+FROM SPLUNK
 WHERE ((SPLUNK.`sourcetype` = 'cisco:asa') AND (NOT (SPLUNK.`event` LIKE '%ASA-4-106023%')))
 EMIT CHANGES;
 ```
+
+## 参考
+- ksqlDB Website  
+https://ksqldb.io/
+- Confluent: ksqlDB 101
+https://developer.confluent.io/learn-kafka/ksqldb/intro/
+- Confluent: Inside ksqlDB  
+https://developer.confluent.io/learn-kafka/ksqldb/intro/
+- Confluent: ksqlDB Product Page
+https://www.confluent.io/product/ksql/
+- "Mastering Kafka Streams and ksqlDB" (Free eBook)  
+https://www.confluent.io/ja-jp/resources/ebook/mastering-kafka-streams-and-ksqldb/
