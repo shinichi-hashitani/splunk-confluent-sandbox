@@ -19,8 +19,10 @@ git clone https://github.com/shinichi-hashitani/splunk-confluent-sandbox.git
 cd splunk-confluent-sandbox
 # 起動
 docker-compose up -d
+# Prometheus/Grafana観測をONにする場合は
+docker-compose -f docker-compose.yml -f prometheus-override.yml up -d
 # 停止/破棄
-docker-compose down
+docker-compose down --remove-orphans
 # 停止後、ドライブを全て初期化
 docker volume prune
 ```
@@ -52,6 +54,10 @@ docker volume prune
 
 ## リポジトリ構成構成
 ![Repo Structure](./assets/images/repo-structure.png "Repo Structure")
+- assets/Grafana  
+データソース定義ならびに各Confluentコンポーネント毎のダッシュボード定義。
+- assets/prometheus  
+prometheus.ymlおよびalert.rules。
 - connect_scripts  
 Connect Cluster起動時の実行スクリプト。具体的にはConnector (Splunk Connector, etc.) の取得とConnectorの登録。
 - ksql-scripts  
@@ -78,6 +84,13 @@ Splunk
 http://<Server FQDN>/en-GB/app/search/search
 user: admin
 password: Password1
+```
+
+Grafana
+```bash
+http://<Server FQDN>:3000
+user: admin
+password: password
 ```
 
 ## 作業手順
@@ -118,6 +131,14 @@ FROM SPLUNK
 WHERE ((SPLUNK.`sourcetype` = 'cisco:asa') AND (NOT (SPLUNK.`event` LIKE '%ASA-4-106023%')))
 EMIT CHANGES;
 ```
+
+## Observability with Promethes/Grafana
+設定、Grafanaダッシュボードの定義等は以下を参考：
+https://github.com/confluentinc/jmx-monitoring-stacks/
+
+![Grafana](./assets/images/grafana.png "Grafana")
+Dashboards/Manage配下にOverview、Kafka Cluster、Consumer等10のダッシュボードが用意されている。
+
 
 ## 参考
 - ksqlDB Website  
