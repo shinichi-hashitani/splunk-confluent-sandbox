@@ -109,27 +109,44 @@ CREATE STREAM SPLUNK (
 KAFKA_TOPIC='splunk-s2s-events', VALUE_FORMAT='JSON');
 ```
 ### 2. StreamからCISCO ASAのログのみ抽出
-Streamからcisco:asaのみ指定して抽出
+Streamからcisco:asaのみ指定して抽出（出力先はElastic）
 ```sql
 CREATE STREAM CISCO_ASA as SELECT
-`event`,
-`source`,
-`sourcetype`,
-`index`  FROM SPLUNK
-where `sourcetype` = 'cisco:asa'
+    `event`,
+    `source`,
+    `sourcetype`,
+    `index`
+FROM SPLUNK
+WHERE `sourcetype` = 'cisco:asa'
 EMIT CHANGES;
 ```
 ### 3. Streamから特定イベントのみ抽出
-Streamから特定イベントのみ抽出し、同時にTopicを生成。CISCO_ASAからクエリ抽出も可能だがAND条件のサンプルとしてSPLUNKから抽出。
+Streamから特定イベントのみ抽出し、同時にTopicを生成。CISCO_ASAからクエリ抽出も可能だがAND条件のサンプルとしてSPLUNKから抽出。　（出力先はSplunk）
 ```sql
 CREATE STREAM CISCO_ASA_FILTERED WITH (KAFKA_TOPIC='CISCO_ASA_FILTERED', PARTITIONS=1, REPLICAS=1) AS SELECT
-SPLUNK.`event` `event`,
-SPLUNK.`source` `source`,
-SPLUNK.`sourcetype` `sourcetype`,
-SPLUNK.`index` `index`
+    SPLUNK.`event` `event`,
+    SPLUNK.`source` `source`,
+    SPLUNK.`sourcetype` `sourcetype`,
+    SPLUNK.`index` `index`
 FROM SPLUNK
 WHERE ((SPLUNK.`sourcetype` = 'cisco:asa') AND (NOT (SPLUNK.`event` LIKE '%ASA-4-106023%')))
 EMIT CHANGES;
+```
+
+### 4. ElasticsearchのConnectorを登録
+3で作成したStream (`CISCO_ASA`) をElasticsearchに流すConnector。
+```sql
+CREATE SINK CONNECTOR SINK_ELASTIC WITH (
+    'connector.class' = 'io.confluent.connect.elasticsearch.ElasticsearchSinkConnector',
+    'topics' = 'CISCO_ASA',
+    'key.converter' = 'org.apache.kafka.connect.storage.StringConverter',
+    'value.converter' = 'org.apache.kafka.connect.json.JsonConverter',
+    'value.converter.schemas.enable' = 'false',
+    'connection.url' = 'http://elasticsearch:9200',
+    'type.name' = '_doc',
+    'key.ignore' = 'true',
+    'schema.ignore'  = 'true'
+);
 ```
 
 ## Observability with Promethes/Grafana
