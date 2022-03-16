@@ -110,7 +110,7 @@ CREATE STREAM SPLUNK (
 ) WITH (
 KAFKA_TOPIC='splunk-s2s-events', VALUE_FORMAT='JSON');
 ```
-### 2. StreamからCISCO ASAのログのみ抽出
+### 2. ソースからSplunk UFのログを抽出
 StreamからSplunkのログを抽出（出力先はElastic）
 ```sql
 CREATE STREAM SPLUNK_LOGS
@@ -124,7 +124,7 @@ FROM SPLUNK
 WHERE SPLUNK.`sourcetype` = 'splunkd'
 EMIT CHANGES;
 ```
-### 3. Streamから特定イベントのみ抽出
+### 3. ソースから機器 (CISCO ASA) のログのみ抽出
 Streamから機器のログを抽出　（出力先はSplunk）
 ```sql
 CREATE STREAM CISCO_ASA_FILTERED
