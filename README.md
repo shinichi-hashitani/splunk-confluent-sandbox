@@ -2,13 +2,15 @@
 
 ## Overview
 ![Overview](./assets/images/overview.png "Overview")
-ネットワーク機器のログをSplunkのUniversal Forwarderを利用してConfluentに転送し、ストリーム処理後にSplunkのHECに転送するサンドボックス環境。オリジナルはJohnny MirzaのSplunk Demoであり利用しているほぼ全てのリソースは彼の準備したもの。 (https://github.com/JohnnyMirza/confluent_splunk_demo) 本リポジトリはその内容を絞り、日本語化したもの。
+ネットワーク機器のログをSplunkのUniversal Forwarderを利用してConfluentに転送し、ストリーム処理後にSplunkのHECに転送するサンドボックス環境。Splunk Universal Forwarderから送られるログを、Confluent内で機器ログ (CISCO ASA) とUniversal Forwarder自身のログ (SPLUNKD) にストリーム処理で分類。ストリーム処理にはksqlDBを利用。
+
+オリジナルはJohnny MirzaのSplunk Demoであり利用しているほぼ全てのリソースは彼の準備したもの。 (https://github.com/JohnnyMirza/confluent_splunk_demo) 本リポジトリはその内容をカスタマイズし、日本語化したもの。
 
 ### 備考
 - 必要なConnectorは起動時に取得/設定される。しかしEnd-to-Endで繋がってはいない為中間処理は追加する必要がある。処理はksqlDBで記載する事を想定しているが必要条件ではない。
 - ネットワーク機器からのログはGeneratorを使い生成したもの。同じレコードセットが繰り返しGeneratorから送られる。
 - Splunkもコンテナ稼働しておりSink Connectorも定義済み。
-- おまけとしてElasticならびにKibanaも定義されており起動している。但しConnectorは未定義。Connectorは読み込まれておりksqlDBにて登録/接続は可能。 (後述)
+- ElasticならびにKibanaも定義されており起動している。但しConnectorは未定義。Connectorは読み込まれておりksqlDBにて登録/接続は可能。 (後述)
 - 機器からのログはCISCO ASAのログだが他のログに切り替えも可能。（e.g. Nginx) ログ内容のカスタマイズも可能。
 
 ## 手順
@@ -109,21 +111,24 @@ CREATE STREAM SPLUNK (
 KAFKA_TOPIC='splunk-s2s-events', VALUE_FORMAT='JSON');
 ```
 ### 2. StreamからCISCO ASAのログのみ抽出
-Streamからcisco:asaのみ指定して抽出（出力先はElastic）
+StreamからSplunkのログを抽出（出力先はElastic）
 ```sql
-CREATE STREAM CISCO_ASA as SELECT
+CREATE STREAM SPLUNK_LOGS
+AS SELECT
     `event`,
+    `host`,
     `source`,
     `sourcetype`,
     `index`
 FROM SPLUNK
-WHERE `sourcetype` = 'cisco:asa'
+WHERE SPLUNK.`sourcetype` = 'splunkd'
 EMIT CHANGES;
 ```
 ### 3. Streamから特定イベントのみ抽出
-Streamから特定イベントのみ抽出し、同時にTopicを生成。CISCO_ASAからクエリ抽出も可能だがAND条件のサンプルとしてSPLUNKから抽出。　（出力先はSplunk）
+Streamから機器のログを抽出　（出力先はSplunk）
 ```sql
-CREATE STREAM CISCO_ASA_FILTERED WITH (KAFKA_TOPIC='CISCO_ASA_FILTERED', PARTITIONS=1, REPLICAS=1) AS SELECT
+CREATE STREAM CISCO_ASA_FILTERED
+AS SELECT
     SPLUNK.`event` `event`,
     SPLUNK.`source` `source`,
     SPLUNK.`sourcetype` `sourcetype`,
@@ -134,11 +139,11 @@ EMIT CHANGES;
 ```
 
 ### 4. ElasticsearchのConnectorを登録
-3で作成したStream (`CISCO_ASA`) をElasticsearchに流すConnector。
+2及び3で作成したStream (`CISCO_ASA_FILTERED` と `SPLUNK_LOGS`) をElasticsearchに流すConnector。
 ```sql
 CREATE SINK CONNECTOR SINK_ELASTIC WITH (
     'connector.class' = 'io.confluent.connect.elasticsearch.ElasticsearchSinkConnector',
-    'topics' = 'CISCO_ASA',
+    'topics' = 'SPLUNK_LOGS, CISCO_ASA_FILTERED',
     'key.converter' = 'org.apache.kafka.connect.storage.StringConverter',
     'value.converter' = 'org.apache.kafka.connect.json.JsonConverter',
     'value.converter.schemas.enable' = 'false',
