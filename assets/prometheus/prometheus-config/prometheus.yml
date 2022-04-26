@@ -42,7 +42,7 @@ scrape_configs:
   - job_name: "kafka-broker"
     static_configs:
       - targets:
-          - "kafka:1234"
+          - "broker:1234"
         labels:
           env: "dev"
     relabel_configs:

@@ -6,7 +6,7 @@ services:
     environment:
       EXTRA_ARGS: -javaagent:/usr/share/jmx-exporter/jmx_prometheus_javaagent-0.16.1.jar=1234:/usr/share/jmx-exporter/zookeeper.yml
 
-  kafka:
+  broker:
     volumes:
       - ./jmx-exporter/:/usr/share/jmx-exporter
     environment:
