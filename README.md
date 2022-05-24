@@ -88,6 +88,11 @@ user: admin
 password: Password1
 ```
 
+Kibana (Elastic)
+```bash
+http://<Server FQDN>:5601 
+```
+
 Grafana
 ```bash
 http://<Server FQDN>:3000
