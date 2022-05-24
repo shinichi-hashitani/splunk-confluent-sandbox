@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "Installing connector plugins"
-confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:latest
+confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:13.0.0
 confluent-hub install --no-prompt splunk/kafka-connect-splunk:latest
 confluent-hub install --no-prompt confluentinc/kafka-connect-splunk-s2s:latest
 #
