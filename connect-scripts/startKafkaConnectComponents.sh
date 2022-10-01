@@ -1,8 +1,8 @@
 #!/bin/bash
 echo "Installing connector plugins"
 confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:13.0.0
+confluent-hub install --no-prompt confluentinc/kafka-connect-splunk-s2s:1.3.0
 confluent-hub install --no-prompt splunk/kafka-connect-splunk:latest
-confluent-hub install --no-prompt confluentinc/kafka-connect-splunk-s2s:latest
 #
 echo "Launching Kafka Connect worker"
 /etc/confluent/docker/run &
@@ -18,7 +18,6 @@ DATA=$(
   "name": "splunk-s2s-source",
   "config": {
     "connector.class": "io.confluent.connect.splunk.s2s.SplunkS2SSourceConnector",
-    "topics": "splunk-s2s-events",
     "splunk.s2s.port":"9997",
     "kafka.topic":"splunk-s2s-events",
     "key.converter":"org.apache.kafka.connect.storage.StringConverter",
@@ -35,7 +34,6 @@ EOF
 )
 
 curl -X POST -H "${HEADER}" --data "${DATA}" http://localhost:8083/connectors
-
 echo "Starting the Spluk sink connector"
 
 HEADER="Content-Type: application/json"
