@@ -83,7 +83,7 @@ http://<Server FQDN>:9021
 
 Splunk
 ```bash
-http://<Server FQDN>/en-GB/app/search/search
+http://<Server FQDN>:8000/en-GB/app/search/search
 user: admin
 password: Password1
 ```
